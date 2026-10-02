@@ -7,7 +7,7 @@ import { Simulation } from './simulation';
 import { FactoryBuilder, solution } from './test-factories';
 import type { DataValue, ExecutionContext } from './types';
 const execute = (type: string, inputs: Record<string, DataValue[]>, config: ExecutionContext['config'] = {}) => registry.get(type).execute({ input: 0, inputs, config: { ...registry.get(type).defaults, ...config }, connected: new Set(Object.keys(inputs)), memory: {} });
-describe('10 playable levels', () => {
+describe(`${levels.length} playable levels`, () => {
   levels.forEach((level, i) => test(`${i + 1}. ${level.name}: visible + hidden tests`, () => { const result = runLevel(solution(i), level); expect(result.tests.filter(t => !t.passed)).toEqual([]); expect(result.passed).toBe(true); }));
 });
 describe('machines', () => {

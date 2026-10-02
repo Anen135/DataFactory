@@ -55,7 +55,7 @@ npm run preview
 
 ## Содержимое
 
-Примеры самостоятельных проектов: Signal Flow и Multiply Stream. Tutorial Campaign содержит десять этапов: передача значения, удвоение, +10, сравнение с 10, чётность, Split/Join, разворот строки, Branch, фильтрация массива, палиндром.
+Примеры самостоятельных проектов: Signal Flow и Multiply Stream. Tutorial Campaign содержит двадцать этапов: передача значения, удвоение, +10, сравнение с 10, чётность, Split/Join, разворот строки, Branch, фильтрация массива, палиндром, модуль, смена знака, логическое НЕ, длина строки, слияние строк, сумма массива, сортировка, уникальность, среднее арифметическое, разворот массива.
 
 27 типов нод: Source, Output, Constant, Arithmetic, Comparator, Split, Join, Stack, Queue, Branch, Filter, Memory, Negate, Abs, Not, Length, Concat, Sum, Sort, Unique, Random, Randint, Randrange, Uniform, Choice, Shuffle, Sample. Multiply — операция `*` у Arithmetic.
 
@@ -85,7 +85,7 @@ $env:PLAYWRIGHT_CHANNEL = 'msedge'
 npm run test:e2e
 ```
 
-Тесты сами запускают Vite или используют существующий сервер на порту 5173. Они проверяют проекты, перенос `.df`, восстановление входных данных, runtime-панели, drag/drop, соединения, перемещение, undo/redo, Step/Pause, Inspector, параметры, пакеты, удаление связей, камеру, Code View и все десять этапов Tutorial. Скриншоты и трассы ошибок — в `test-results/`.
+Тесты сами запускают Vite или используют существующий сервер на порту 5173. Они проверяют проекты, перенос `.df`, восстановление входных данных, runtime-панели, drag/drop, соединения, перемещение, undo/redo, Step/Pause, Inspector, параметры, пакеты, удаление связей, камеру, Code View и все двадцать этапов Tutorial. Скриншоты и трассы ошибок — в `test-results/`.
 
 ## Статическая публикация
 

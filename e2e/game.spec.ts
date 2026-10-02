@@ -259,7 +259,7 @@ test('inspector configuration, visible packets, wire deletion and camera control
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('all ten levels pass through import, run, tests and next level UI', async ({ page }) => {
+test('all levels pass through import, run, tests and next level UI', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
@@ -276,9 +276,9 @@ test('all ten levels pass through import, run, tests and next level UI', async (
     await page.locator('[data-tab="tests"]').click();
     await page.locator('[data-action="next"]').click();
   }
-  await expect(page.locator('.level-card.completed')).toHaveCount(10);
+  await expect(page.locator('.level-card.completed')).toHaveCount(levels.length);
   await page.reload();
   await page.locator('[data-action="tutorial"]').click();
-  await expect(page.locator('.level-card.completed')).toHaveCount(10);
+  await expect(page.locator('.level-card.completed')).toHaveCount(levels.length);
   expect(errors).toEqual([]);
 });

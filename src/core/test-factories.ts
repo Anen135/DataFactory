@@ -18,5 +18,16 @@ export function solution(index: number): FactoryGraph {
     return b.graph;
   }
   if (index === 7) return b.add('zero', 'constant', { value: 0 }).add('cmp', 'comparator').add('branch', 'branch').add('yes', 'constant', { value: 'POSITIVE' }).add('no', 'constant', { value: 'NEGATIVE' }).wire('s', 'cmp', 'a').wire('zero', 'cmp', 'b').wire('s', 'branch', 'data').wire('cmp', 'branch', 'condition').wire('branch', 'yes', 'trigger', 'true').wire('branch', 'no', 'trigger', 'false').wire('yes', 'o').wire('no', 'o').graph;
-  return b.add('split', 'split').add('ten', 'constant', { value: 10 }).add('cmp', 'comparator').add('filter', 'filter').add('join', 'join', { mode: 'array' }).wire('s', 'split').wire('split', 'cmp', 'a').wire('ten', 'cmp', 'b').wire('split', 'filter', 'data').wire('cmp', 'filter', 'condition').wire('filter', 'join').wire('join', 'o').graph;
+  if (index === 8) return b.add('split', 'split').add('ten', 'constant', { value: 10 }).add('cmp', 'comparator').add('filter', 'filter').add('join', 'join', { mode: 'array' }).wire('s', 'split').wire('split', 'cmp', 'a').wire('ten', 'cmp', 'b').wire('split', 'filter', 'data').wire('cmp', 'filter', 'condition').wire('filter', 'join').wire('join', 'o').graph;
+  if (index === 10) return b.add('abs', 'abs').wire('s', 'abs').wire('abs', 'o').graph;
+  if (index === 11) return b.add('negate', 'negate').wire('s', 'negate').wire('negate', 'o').graph;
+  if (index === 12) return b.add('ten', 'constant', { value: 10 }).add('cmp', 'comparator').add('not', 'not').wire('s', 'cmp', 'a').wire('ten', 'cmp', 'b').wire('cmp', 'not').wire('not', 'o').graph;
+  if (index === 13) return b.add('len', 'length').wire('s', 'len').wire('len', 'o').graph;
+  if (index === 14) return b.add('bang', 'constant', { value: '!' }).add('concat', 'concat').wire('s', 'concat', 'a').wire('bang', 'concat', 'b').wire('concat', 'o').graph;
+  if (index === 15) return b.add('sum', 'sum').wire('s', 'sum').wire('sum', 'o').graph;
+  if (index === 16) return b.add('sort', 'sort').wire('s', 'sort').wire('sort', 'o').graph;
+  if (index === 17) return b.add('unique', 'unique').wire('s', 'unique').wire('unique', 'o').graph;
+  if (index === 18) return b.add('sum', 'sum').add('len', 'length').add('div', 'arithmetic', { operation: '/' }).wire('s', 'sum').wire('s', 'len').wire('sum', 'div', 'a').wire('len', 'div', 'b').wire('div', 'o').graph;
+  if (index === 19) return b.add('split', 'split').add('stack', 'stack').add('join', 'join', { mode: 'array' }).wire('s', 'split').wire('split', 'stack').wire('stack', 'join').wire('join', 'o').graph;
+  return b.graph;
 }
