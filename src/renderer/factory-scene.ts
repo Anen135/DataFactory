@@ -55,7 +55,7 @@ export class FactoryScene extends Phaser.Scene {
   }
   private editingText(): boolean { return ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName ?? ''); }
   private onChange(change: StateChange): void {
-    if (change.kind === 'graph' || change.kind === 'level') { this.pending = undefined; this.preview.clear(); this.clearPackets(); this.rebuild(); if (change.kind === 'level') this.fit(); }
+    if (change.kind === 'graph' || change.kind === 'workspace') { this.pending = undefined; this.preview.clear(); this.clearPackets(); this.rebuild(); if (change.kind === 'workspace') this.fit(); }
     if (change.kind === 'selection') { this.decorate(); this.drawWires(); }
     if (change.kind === 'runtime') {
       if (this.state.mode === 'EDIT' || (!change.event && !this.state.simulation?.ticks)) this.clearPackets();

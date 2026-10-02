@@ -45,6 +45,21 @@ const pythonEmitters: Record<string, Emitter> = {
   filter: (n, i) => [`${n.id}_out = [v for v, test in pair(${i('data')}, ${i('condition')}) if test]`],
   memory: (n, i) => [`${n.id}_current = (${i('write')} or [${pyValue(n.parameters.initial)}])[-1]`, `${n.id}_out = ${n.inputs.read ? `[${n.id}_current for _ in ${i('read')}]` : `list(${i('write')}) or [${n.id}_current]`}`],
   output: (n, i) => [`${n.id}_out = ${i('in')}`],
+  negate: (n, i) => [`${n.id}_out = [-float(value) for value in ${i('in')}]`],
+  abs: (n, i) => [`${n.id}_out = [abs(value) for value in ${i('in')}]`],
+  not: (n, i) => [`${n.id}_out = [not value for value in ${i('in')}]`],
+  length: (n, i) => [`${n.id}_out = [len(value) for value in ${i('in')}]`],
+  concat: (n, i) => [`${n.id}_out = [a + b for a, b in pair(${i('a')}, ${i('b')})]`],
+  sum: (n, i) => [`${n.id}_out = [reduce(lambda a, b: a + b, value, 0) for value in ${i('in')}]`],
+  sort: (n, i) => [`${n.id}_out = [sorted(value, reverse=${n.parameters.order === 'descending' ? 'True' : 'False'}) for value in ${i('in')}]`],
+  unique: (n, i) => [`${n.id}_out = [unique(value) for value in ${i('in')}]`],
+  random: (n, i) => [`${n.id}_out = [random.random() for _ in ${n.inputs.trigger ? i('trigger') : '[None]'}]`],
+  randint: (n, i) => [`${n.id}_out = [random.randint(${pyValue(n.parameters.min)}, ${pyValue(n.parameters.max)}) for _ in ${n.inputs.trigger ? i('trigger') : '[None]'}]`],
+  randrange: (n, i) => [`${n.id}_out = [random.randrange(${pyValue(n.parameters.start)}, ${pyValue(n.parameters.stop)}, ${pyValue(n.parameters.step)}) for _ in ${n.inputs.trigger ? i('trigger') : '[None]'}]`],
+  uniform: (n, i) => [`${n.id}_out = [random.uniform(${pyValue(n.parameters.a)}, ${pyValue(n.parameters.b)}) for _ in ${n.inputs.trigger ? i('trigger') : '[None]'}]`],
+  choice: (n, i) => [`${n.id}_out = [random.choice(value) for value in ${i('in')}]`],
+  shuffle: (n, i) => [`${n.id}_out = []`, `for value in ${i('in')}:`, '    shuffled = list(value)', '    random.shuffle(shuffled)', `    ${n.id}_out.append(shuffled)`],
+  sample: (n, i) => [`${n.id}_out = [random.sample(value, ${pyValue(n.parameters.k)}) for value in ${i('in')}]`],
 };
 const pythonEquality = `def equal(a, b):
     if isinstance(a, bool) != isinstance(b, bool):
@@ -54,8 +69,16 @@ const pythonEquality = `def equal(a, b):
     return a == b`;
 
 const helpers = `from math import fmod as remainder
+from functools import reduce
 
 ${pythonEquality}
+
+def unique(values):
+    result = []
+    for value in values:
+        if not any(equal(value, previous) for previous in result):
+            result.append(value)
+    return result
 
 def pair(a, b):
     if not a or not b:
@@ -70,7 +93,8 @@ export class PythonGenerator implements CodeGenerator {
   language = 'Python';
   generate(program: Program): string {
     if (scalar(program)) return scalarCode(program, 'Python');
-    const lines = [helpers, '# Each list is a finite stream of packets.', 'def factory(input_value):'];
+    const usesRandom = program.nodes.some(n => ['random', 'randint', 'randrange', 'uniform', 'choice', 'shuffle', 'sample'].includes(n.operation));
+    const lines = [...usesRandom ? ['import random', '# Random results may differ from the browser runtime.'] : [], helpers, '# Each list is a finite stream of packets.', 'def factory(input_value):'];
     for (const n of program.nodes) {
       const emitter = pythonEmitters[n.operation]; if (!emitter) throw new Error(`Python: пока нет генератора для ${n.operation}.`);
       const input = (port: string) => n.inputs[port]?.map(e => `${e.node}_${e.port}`).join(' + ') || '[]';

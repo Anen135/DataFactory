@@ -34,10 +34,10 @@ try {
   assert.equal(response.status(), 200);
   await page.locator('#game canvas').waitFor({ state: 'visible' });
   await page.locator('[data-machine="source"]').click();
-  await page.waitForFunction(() => document.querySelector('#graph-count')?.textContent?.includes('1 машин'));
+  await page.waitForFunction(() => document.querySelector('#graph-count')?.textContent?.includes('1 nodes'));
   await page.reload();
   await page.locator('#game canvas').waitFor({ state: 'visible' });
-  assert.match(await page.locator('#graph-count').textContent(), /1 машин/);
+  assert.match(await page.locator('#graph-count').textContent(), /1 nodes/);
   assert(requests.every(url => url.startsWith(origin)), 'Production page unexpectedly needs an external resource');
   assert.deepEqual(errors, []);
   await mkdir('test-results', { recursive: true });

@@ -6,6 +6,8 @@ export interface Port { id: string; label: string; direction: 'input' | 'output'
 export interface Machine { id: string; type: string; x: number; y: number; config: Record<string, DataValue> }
 export interface Connection { id: string; from: { machine: string; port: string }; to: { machine: string; port: string } }
 export interface FactoryGraph { version: 1; machines: Machine[]; connections: Connection[] }
+/** Portable project document. Runtime snapshots and tutorial progress are not part of the program. */
+export interface FactoryProject { format: 'data-factory'; version: 1; name: string; input: DataValue; graph: FactoryGraph }
 export interface DataPacket { id: string; value: DataValue; type: DataType; currentConnection: string; state: 'created' | 'moving' | 'delivered' }
 export interface ExecutionContext { input: DataValue; inputs: Record<string, DataValue[]>; connected: ReadonlySet<string>; config: Machine['config']; memory: Record<string, DataValue> }
 export interface MachineResult { outputs: Record<string, DataValue[]>; state?: Record<string, DataValue> }

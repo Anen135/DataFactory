@@ -3,14 +3,133 @@ import type { FactoryGraph } from '../src/core/types';
 import { solution } from '../src/core/test-factories';
 import { levels } from '../src/content/levels';
 
-async function graph(page: Page, level = 'first-signal'): Promise<FactoryGraph> {
-  return page.evaluate(id => JSON.parse(localStorage.getItem(`data-factory:v1:graph:${id}`) ?? '{"version":1,"machines":[],"connections":[]}'), level);
+test('random nodes validate settings and run Dice Rolls', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game canvas')).toBeVisible();
+  await page.locator('[data-machine="randint"]').click();
+  await page.locator('[data-config="min"]').fill('7');
+  await page.locator('[data-config="min"]').press('Tab');
+  await expect(page.locator('#status-message')).toContainText('min должен');
+  await expect(page.locator('[data-config="min"]')).toHaveValue('1');
+  await page.locator('[data-action="examples"]').click();
+  await page.locator('[data-example="dice-rolls"]').click();
+  await page.locator('#speed').selectOption('0');
+  await page.locator('#run-btn').click();
+  await expect(page.locator('#mode')).toHaveText('DONE');
+  const status = await page.locator('#status-message').textContent();
+  const result = JSON.parse(status!.split('Выход: ')[1]);
+  expect(result).toHaveLength(1); expect(result[0]).toHaveLength(5);
+  expect(result[0].every((n: number) => Number.isInteger(n) && n >= 1 && n <= 6)).toBe(true);
+  await page.locator('[data-tab="code"]').click();
+  await expect(page.locator('.code-view')).toContainText('import random');
+  await expect(page.locator('.code-view')).toContainText('random.randint(1, 6)');
+});
+
+test('new nodes expose configuration, persist and execute an array program', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game canvas')).toBeVisible();
+  for (const type of ['negate', 'abs', 'not', 'length', 'concat', 'sum', 'sort', 'unique']) {
+    await expect(page.locator(`[data-machine="${type}"]`)).toHaveCount(1);
+  }
+  await page.locator('[data-machine="sort"]').click();
+  await page.locator('[data-config="order"]').selectOption('descending');
+  await page.reload();
+  expect((await graph(page)).machines[0].config.order).toBe('descending');
+  await page.locator('[data-action="examples"]').click();
+  await page.locator('[data-example="array-summary"]').click();
+  await page.locator('#speed').selectOption('0');
+  await page.locator('#run-btn').click();
+  await expect(page.locator('.console')).toContainText('Выход: [12]');
+  await page.locator('[data-tab="variables"]').click();
+  await expect(page.locator('#tab-content')).toContainText('[-2,1,3,10]');
+  await page.locator('[data-tab="code"]').click();
+  await expect(page.locator('.code-view')).toContainText('sorted(');
+  await expect(page.locator('.code-view')).toContainText('reduce(');
+});
+
+test('standalone project, examples, runtime panels and reload', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.locator('#game canvas')).toBeVisible();
+  await expect(page.locator('[data-machine]')).toHaveCount(27);
+  await expect(page.locator('#tests-tab')).toBeHidden();
+  await expect(page.locator('#tutorial')).toBeHidden();
+  await expect(page.locator('.mission-card')).toHaveCount(0);
+  await page.locator('[data-action="examples"]').click();
+  await page.locator('[data-example="multiply"]').click();
+  await page.locator('#runtime-input').fill('{bad');
+  await page.locator('#runtime-input').press('Tab');
+  await page.locator('#run-btn').click();
+  await expect(page.locator('#mode')).toHaveText('EDIT');
+  await expect(page.locator('#status-message')).toContainText('Исправьте Input JSON');
+  await page.locator('#runtime-input').fill('15');
+  await page.locator('#runtime-input').press('Tab');
+  await page.locator('#speed').selectOption('0');
+  await page.locator('#run-btn').click();
+  await expect(page.locator('#mode')).toHaveText('DONE');
+  await expect(page.locator('.console')).toContainText('Выход: [30]');
+  await expect(page.locator('#tests-tab')).toBeHidden();
+  await page.locator('[data-tab="variables"]').click();
+  await expect(page.locator('#tab-content')).toContainText('30');
+  await page.locator('[data-tab="execution"]').click();
+  await expect(page.locator('#tab-content')).toContainText('transfer');
+  await page.locator('[data-tab="profiler"]').click();
+  await expect(page.locator('.profiler-metrics')).toContainText('4 / 4');
+  await page.locator('[data-tab="errors"]').click();
+  await expect(page.locator('#tab-content')).toContainText('Ошибок не обнаружено');
+  await page.screenshot({ path: 'test-results/project-editor.png' });
+  await page.reload();
+  await expect(page.locator('#project-name')).toHaveText('Multiply Stream.df');
+  await expect(page.locator('#runtime-input')).toHaveValue('15');
+  await expect.poll(async () => (await graph(page)).machines.length).toBe(4);
+  expect(errors).toEqual([]);
+});
+
+test('new blank project, open saved project and portable file round trip', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('[data-action="examples"]').click();
+  await page.locator('[data-example="signal"]').click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('[data-action="export"]').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('Signal Flow.df');
+  const path = (await download.path())!;
+  await page.locator('[data-action="new-project"]').click();
+  await page.locator('#new-project-name').fill('My Factory');
+  await page.getByRole('button', { name: 'Create Project', exact: true }).click();
+  await expect(page.locator('#empty-state')).toBeVisible();
+  await expect(page.locator('#project-name')).toHaveText('My Factory.df');
+  await page.locator('[data-machine="memory"]').click();
+  await page.locator('[data-action="open-project"]').click();
+  await page.locator('[data-project]').filter({ hasText: 'Signal Flow.df' }).click();
+  await expect.poll(async () => (await graph(page)).machines.length).toBe(2);
+  await page.locator('[data-action="open-project"]').click();
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.locator('[data-action="open-file"]').click();
+  await (await chooserPromise).setFiles(path);
+  await expect(page.locator('#modal')).not.toBeVisible();
+  await expect(page.locator('#project-name')).toHaveText('Signal Flow.df');
+  await expect.poll(async () => (await graph(page)).connections.length).toBe(1);
+  await page.locator('[data-action="open-project"]').click();
+  await page.locator('[data-project]').filter({ hasText: 'My Factory.df' }).click();
+  expect((await graph(page)).machines[0].type).toBe('memory');
+});
+
+async function graph(page: Page, level?: string): Promise<FactoryGraph> {
+  return page.evaluate(id => {
+    const active = localStorage.getItem('data-factory:v1:active-workspace') ?? 'project:blank';
+    const key = id ?? (active.startsWith('tutorial:') ? active.slice(9) : active);
+    return JSON.parse(localStorage.getItem(`data-factory:v1:graph:${key}`) ?? '{"version":1,"machines":[],"connections":[]}');
+  }, level);
 }
 
 test('build first level using the canvas, run, save and reload', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
+  await page.locator('[data-action="tutorial"]').click();
+  await page.locator('[data-level="first-signal"]').click();
   await expect(page.locator('#game canvas')).toBeVisible();
   await page.screenshot({ path: 'test-results/first-screen.png' });
   const canvas = page.locator('#game canvas');
@@ -29,10 +148,12 @@ test('build first level using the canvas, run, save and reload', async ({ page }
   await page.locator('#speed').selectOption('4');
   await page.locator('#run-btn').click();
   await expect(page.locator('#test-count')).toHaveText('5/5');
+  await page.locator('[data-tab="tests"]').click();
   await expect(page.locator('.test-summary')).toContainText('ФАБРИКА РАБОТАЕТ');
   await page.reload();
-  await expect(page.locator('#graph-count')).toContainText('2 машин · 1 связей');
-  await expect(page.locator('#progress-label')).toContainText('1 / 10');
+  await expect(page.locator('#graph-count')).toContainText('2 nodes · 1 connections');
+  await page.locator('[data-action="tutorial"]').click();
+  await expect(page.locator('.level-card.completed')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 
@@ -56,20 +177,20 @@ test('move, undo and redo machines', async ({ page }) => {
 
 test('pause, step, code view and runtime lock', async ({ page }) => {
   await page.goto('/');
-  await page.locator('[data-action="map"]').click();
+  await page.locator('[data-action="tutorial"]').click();
   await page.locator('[data-level="double"]').click();
   await page.locator('#import-file').setInputFiles({ name: 'double.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(solution(1))) });
   await page.locator('[data-action="fit"]').click();
   await page.locator('#speed').selectOption('0.25');
   await page.locator('#run-btn').click();
-  await expect(page.locator('#run-btn')).toContainText('Пауза');
+  await expect(page.locator('#run-btn')).toContainText('Pause');
   await page.locator('#run-btn').click();
   await expect(page.locator('#mode')).toContainText('PAUSED');
   const ticks = await page.locator('#stats-line').textContent();
   await page.waitForTimeout(600);
   await expect(page.locator('#stats-line')).toHaveText(ticks!);
   await page.locator('#step-btn').click();
-  await expect(page.locator('#stats-line')).toContainText('1 тиков');
+  await expect(page.locator('#stats-line')).toContainText('1 ticks');
   const before = await graph(page, 'double');
   await expect(page.locator('[data-machine="source"]')).toBeDisabled();
   expect(await graph(page, 'double')).toEqual(before);
@@ -85,7 +206,7 @@ test('pause, step, code view and runtime lock', async ({ page }) => {
 test('inspector configuration, visible packets, wire deletion and camera controls', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto('/');
-  await page.locator('[data-action="map"]').click();
+  await page.locator('[data-action="tutorial"]').click();
   await page.locator('[data-level="double"]').click();
   const g = solution(1);
   const positions: Record<string, [number, number]> = { s: [48, 48], c: [48, 240], m: [384, 120], o: [720, 120] };
@@ -105,11 +226,11 @@ test('inspector configuration, visible packets, wire deletion and camera control
   await expect.poll(async () => (await graph(page, 'double')).machines.find(m => m.id === 'c')!.config.value).toBe(2);
   await page.locator('#step-btn').click();
   await page.locator('#step-btn').click();
-  await expect(page.locator('#stats-line')).toContainText('2 тиков');
+  await expect(page.locator('#stats-line')).toContainText('2 ticks');
   await page.waitForTimeout(450);
   const beforePacket = await canvas.screenshot();
   await page.locator('#step-btn').click();
-  await expect(page.locator('#stats-line')).toContainText('3 тиков');
+  await expect(page.locator('#stats-line')).toContainText('3 ticks');
   const afterPacket = await canvas.screenshot();
   expect(afterPacket.equals(beforePacket)).toBe(false);
   await page.screenshot({ path: 'test-results/packet-step-1920.png' });
@@ -142,6 +263,8 @@ test('all ten levels pass through import, run, tests and next level UI', async (
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
+  await page.locator('[data-action="tutorial"]').click();
+  await page.locator('[data-level="first-signal"]').click();
   for (let index = 0; index < levels.length; index++) {
     const level = levels[index];
     await expect(page.locator('#level-name')).toHaveText(level.name);
@@ -150,10 +273,12 @@ test('all ten levels pass through import, run, tests and next level UI', async (
     await page.locator('#speed').selectOption('0');
     await page.locator('#run-btn').click();
     await expect(page.locator('#test-count')).toHaveText(`${level.tests.length}/${level.tests.length}`);
+    await page.locator('[data-tab="tests"]').click();
     await page.locator('[data-action="next"]').click();
   }
   await expect(page.locator('.level-card.completed')).toHaveCount(10);
   await page.reload();
-  await expect(page.locator('#progress-label')).toContainText('10 / 10');
+  await page.locator('[data-action="tutorial"]').click();
+  await expect(page.locator('.level-card.completed')).toHaveCount(10);
   expect(errors).toEqual([]);
 });

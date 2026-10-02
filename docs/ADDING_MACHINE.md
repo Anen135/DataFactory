@@ -52,7 +52,7 @@ UI создаст controls автоматически. Defaults и select option
 
 ## 4. Доступность
 
-Добавьте `negate` в `availableMachines` нужного уровня в `src/content/levels/index.ts`. Renderer автоматически использует metadata/ports для формы, цветов и соединений. Palette использует имя и описание; при желании добавьте короткую подпись в `src/ui/panels.ts`.
+В обычных проектах новое определение автоматически появится в Node Palette. Для включения в Tutorial добавьте его тип в `availableMachines` нужного этапа в `src/content/levels/index.ts`. Renderer автоматически использует metadata/ports для формы, цветов и соединений. Palette использует имя и описание; при желании добавьте короткую подпись в `src/ui/panels.ts`.
 
 ## 5. Тесты
 
